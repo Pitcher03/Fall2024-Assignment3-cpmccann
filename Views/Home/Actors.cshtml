@@ -1,0 +1,190 @@
+﻿@{
+    ViewBag.Title = "Manage Actors";
+
+    List<Movie> movies = new List<Movie>();
+}
+
+<link href="https://maxcdn.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css" rel="stylesheet">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+<script src="https://code.jquery.com/jquery-3.5.1.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@4.5.2/dist/js/bootstrap.bundle.min.js"></script>
+<h1>Actors</h1>
+<p>Use the tabs below to view, add, edit, or delete actors.</p>
+<ul class="nav nav-tabs" id="movieTab" role="tablist">
+    <li class="nav-item">
+        <a class="nav-link active" id="view-tab" data-toggle="tab" href="#view" role="tab" aria-controls="view" aria-selected="true">View Actors</a>
+    </li>
+    <li class="nav-item">
+        <a class="nav-link" id="add-tab" data-toggle="tab" href="#add" role="tab" aria-controls="add" aria-selected="false">Add Actor</a>
+    </li>
+</ul>
+<div class="tab-content">
+    <div class="tab-pane fade show active" id="view" role="tabpanel" aria-labelledby="view-tab">
+        <div id="actorResultsContainer">Loading actors...</div>
+        <div id="editActorModal" class="modal fade" tabindex="-1" role="dialog" aria-labelledby="editActorModalLabel" aria-hidden="true">
+            <div class="modal-dialog" role="document" style="padding-top: 100px;">
+                <div class="modal-content">
+                    <div class="modal-header" style="color: ghostwhite;">
+                        <h5 class="modal-title" id="editActorModalLabel">Edit Actor</h5>
+                        <button type="button" class="close" aria-label="Close" onclick="CloseEditActorModal()">
+                            <span aria-hidden="true" style="color: ghostwhite;">&times;</span>
+                        </button>
+                    </div>
+                    <form id="editActorForm" asp-area="" asp-controller="Actor" asp-action="EditActor" method="post">
+                        <div class="modal-body" style="max-height: 400px; overflow-y: auto;">
+                            <input id="actorId" name="id" style="display: none;">
+                            <div class="form-group">
+                                <label for="editActorName">Name</label>
+                                <input id="editActorName" type="text" class="form-control" name="name" placeholder="Name">
+                            </div>
+                            <div class="form-group">
+                                <label for="editActorAge">Age</label>
+                                <input id="editActorAge" type="number" class="form-control" name="age" placeholder="Age">
+                            </div>
+                            <div class="form-group">
+                                <label for="editActorGender">Genre</label>
+                                <select id="editActorGender" class="form-control" name="gender">
+                                    <option value="Male">Male</option>
+                                    <option value="Female">Female</option>
+                                </select>
+                            </div>
+                            <div class="form-group">
+                                <label for="editActorImdbLink">IMDB Link</label>
+                                <input id="editActorImdbLink" type="url" class="form-control" name="imdblink" placeholder="Add a link to IMDB...">
+                            </div>
+                            <div class="form-group">
+                                <label for="editActorCoverImageLink">Cover Image Link</label>
+                                <input id="editActorCoverImageLink" type="url" class="form-control" name="coverimagelink" placeholder="Add a link to the cover image...">
+                            </div>
+                            <div class="form-group">
+                                <label for="editActorMovies">Select Movies</label>
+                                <select id="editActorMovies" multiple class="form-control" name="movies">
+                                    <option disabled selected value="none">Select Movies</option>
+                                </select>
+                            </div>
+                        </div>
+                        <div class="modal-footer">
+                            <button type="submit" class="btn btn-primary">Update Actor</button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="tab-pane fade" id="add" role="tabpanel" aria-labelledby="add-tab">
+        <form id="addActorForm" asp-area="" asp-controller="Actor" asp-action="AddActor" method="post">
+            <div class="form-group">
+                <input type="text" name="name" class="form-control" placeholder="Actor Name" required>
+            </div>
+            <div class="form-group">
+                <input type="number" name="age" class="form-control" placeholder="Age" required>
+            </div>
+            <div class="form-group">
+                <select class="form-control" name="gender" required>
+                    <option disabled selected value="unset">Gender</option>
+                    <option value="Male">Male</option>
+                    <option value="Female">Female</option>
+                </select>
+            </div>
+            <div class="form-group">
+                <input type="url" name="imdblink" class="form-control" placeholder="Add a link to IMDB...">
+            </div>
+            <div class="form-group">
+                <input type="url" name="coverimagelink" class="form-control" placeholder="Add a link to the cover image...">
+            </div>
+            <div class="form-group">
+                <label for="movies">Select Movies</label>
+                <select multiple class="form-control" name="movies">
+                    <option disabled selected value="none">Select Movies</option>
+                    <option value="actor-1">Actor 1</option>
+                </select>
+            </div>
+            <button type="submit" class="btn btn-primary">Add Actor</button>
+        </form>
+    </div>
+    <div id="viewActorModal" class="modal fade" tabindex="-1" role="dialog">
+        <div class="modal-dialog modal-xl modal-dialog-centered" role="document">
+            <div class="modal-content" style="background-color: rgba(0,0,0,0.9); color: white; margin-top: 70px;">
+                <div class="modal-header bg-dark text-light">
+                    <h5 id="viewActorName" class="modal-title"></h5>
+                    <button type="button" class="close text-light" onclick="CloseViewActorModal()" aria-label="Close">
+                        <span aria-hidden="true">&times;</span>
+                    </button>
+                </div>
+                <div class="modal-body p-4 d-flex">
+                    <div class="actor-cover-image" id="viewActorCoverImage"></div>
+                    <div class="actor-info ml-4 flex-fill">
+                        <p><strong>Age:</strong> <span id="viewActorAge"></span></p>
+                        <p><strong>Gender:</strong> <span id="viewActorGender"></span></p>
+                        <p><strong>Movies:</strong> <span id="viewActorMovies"></span></p>
+                        <a id="viewActorImdbLink" href="" target="_blank" class="btn btn-outline-info mt-3">
+                            View on IMDb
+                        </a>
+                    </div>
+                </div>
+                <hr class="m-0">
+                <div class="modal-footer flex-column align-items-start bg-light">
+                    <h6 class="text-dark">Tweets</h6>
+                    <div id="viewActorTweets" class="tweers-container w-100">
+                        <p><strong>Reviewer 1:</strong> Lorem ipsum dolor sit amet, consectetur adipiscing elit. Vivamus lacinia odio vitae vestibulum.</p>
+                        <p><strong>Reviewer 2:</strong> Curabitur ac felis arcu. Sed eleifend, lectus sit amet pharetra tincidunt, est est facilisis.</p>
+                        <p><strong>Reviewer 3:</strong> Pellentesque habitant morbi tristique senectus et netus et malesuada fames ac turpis egestas.</p>
+                        <p><strong>Reviewer 4:</strong> Praesent ac semper neque. Donec vel ligula nec erat tempus.</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+<script>
+    $(document).ready(function () {
+        $('#view-tab').on('click', function () {
+            $.ajax({
+                url: '@Url.Action("GetActors", "Actor")',
+                type: 'GET',
+                success: function (html) {
+                    html = html.substring(html.indexOf('actorResultsStart') - 9, html.indexOf('actorResultsEnd') + 31);
+                    $('#actorResultsContainer').html(html);
+                },
+                error: function (e) {
+                    console.log(e);
+                }
+            });
+        });
+
+        $('#view-tab').trigger('click');
+    });
+</script>
+<script>
+    function OpenEditActorModal(id, name, age, gender, imdblink, coverimagelink) {
+        document.getElementById('editActorModal').style.display = "block";
+        document.getElementById('editActorModal').style.opacity = "1";
+        document.getElementById('actorId').value = id;
+        document.getElementById('editActorName').value = name;
+        document.getElementById('editActorAge').value = year;
+        document.getElementById('editActorGender').value = gender;
+        document.getElementById('editActorImdbLink').value = imdblink;
+        document.getElementById('editActorCoverImageLink').value = coverimagelink;
+    }
+
+    function CloseEditActorModal() {
+        document.getElementById('editActorModal').style.display = "none";
+    }
+
+    function OpenViewActorModal(name, age, gender, imdblink, coverimagelink, movies, tweets) {
+        document.getElementById('viewActorModal').style.display = "block";
+        document.getElementById('viewActorModal').style.opacity = "1";
+        document.getElementById('viewActorName').innerText = name;
+        document.getElementById('viewActorAge').innerText = age;
+        document.getElementById('viewActorGender').innerText = gender;
+        document.getElementById('viewActorImdbLink').href = imdblink;
+        document.getElementById('viewActorCoverImage').style.backgroundImage = `url('${coverimagelink}')`;
+        document.getElementById('viewActorMovies').innerText = movies;
+        document.getElementById('viewActorTweets').innerHTML = tweets;
+    }
+
+    function CloseViewActorModal() {
+        document.getElementById('viewActorModal').style.display = "none";
+    }
+
+</script>

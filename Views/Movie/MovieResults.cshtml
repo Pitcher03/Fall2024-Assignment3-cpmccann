@@ -1,0 +1,59 @@
+﻿@model Fall2024_Assignment3_cpmccann.Models.MovieModel
+@{
+    ViewBag.Title = "MovieResults";
+    MovieModel model = Model;
+}
+
+<div id="movieResultsStart" class="container mt-4">
+    <h2 class="text-center">@Model.MovieList?.Count Results</h2>
+    <div class="row">
+        @if (Model.MovieList != null && Model.MovieList.Count > 0)
+        {
+            foreach (Movie movie in Model.MovieList)
+            {
+                string actors = movie.Actors != null ? string.Join(", ", movie.Actors) : "None Listed";
+                string? reviews = movie.Reviews != "" ? movie.Reviews : "No reviews yet!";
+                <div class="col-md-4 mb-4 d-flex" onclick="OpenViewMovieModal(`@movie.Name`, 
+                                        @movie.Year, `@movie.Genre`, `@movie.Description`, 
+                                        '@movie.ImdbLink', '@movie.CoverImageLink', `@actors`, `@reviews`)">
+                    <div class="card flex-fill hover-grow">
+                        <div class="blurred-background" style="background-image: url(@movie.CoverImageLink)"></div>
+                        <div class="overlay"></div>
+                        <div class="card-body d-flex flex-column" style="position: relative; z-index: 2; color: ghostwhite;">
+                            <h5 class="card-title">@movie.Name (@movie.Year)</h5>
+                            <p class="card-text">
+                                <strong>Genre:</strong> @movie.Genre <br />
+                                <strong>Description:</strong> @movie.Description
+                            </p>
+                            <div class="mt-auto d-flex justify-content-between">
+                                <a class="btn btn-danger"
+                                    asp-area=""
+                                    asp-controller="Movie"
+                                    asp-action="DeleteMovie"
+                                    asp-route-id="@movie.Id"
+                                    onclick="event.stopPropagation();">
+                                    Delete Movie
+                                </a>
+                                <button class="btn btn-info"
+                                    onclick="event.stopPropagation(); OpenEditMovieModal(
+                                    @movie.Id, '@movie.Name', @movie.Year, '@movie.Genre', 
+                                    '@movie.Description', '@movie.ImdbLink', '@movie.CoverImageLink')">
+                                    Edit Movie
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            }
+        }
+        else
+        {
+            <div class="col-12">
+                <div class="alert alert-warning text-center" role="alert">
+                    No movies available.
+                </div>
+            </div>
+        }
+    </div>
+    <span style="display: none;" id="movieResultsEnd"></span>
+</div>

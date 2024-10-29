@@ -1,0 +1,58 @@
+﻿@model Fall2024_Assignment3_cpmccann.Models.ActorModel
+@{
+    ViewBag.Title = "ActorResults";
+    ActorModel model = Model;
+}
+
+<div id="actorResultsStart" class="container mt-4">
+    <h2 class="text-center">@Model.ActorList?.Count Results</h2>
+    <div class="row">
+        @if (Model.ActorList != null && Model.ActorList.Count > 0)
+        {
+            foreach (Actor actor in Model.ActorList)
+            {
+                string movies = actor.Movies != null ? string.Join(", ", actor.Movies) : "None Listed";
+                string? tweets = actor.Tweets != "" ? actor.Tweets : "No tweets yet!";
+                <div class="col-md-4 mb-4 d-flex" onclick="OpenViewActorModal(`@actor.Name`,
+                                        @actor.Age, `@actor.Gender`, '@actor.ImdbLink',
+                                        '@actor.CoverImageLink', `@movies`, `@tweets`)">
+                    <div class="card flex-fill hover-grow">
+                        <div class="blurred-background" style="background-image: url(@actor.CoverImageLink)"></div>
+                        <div class="overlay"></div>
+                        <div class="card-body d-flex flex-column" style="position: relative; z-index: 2; color: ghostwhite;">
+                            <h5 class="card-title">@actor.Name (@actor.Age)</h5>
+                            <p class="card-text">
+                                <strong>Gender:</strong> @actor.Gender <br />
+                            </p>
+                            <div class="mt-auto d-flex justify-content-between">
+                                <a class="btn btn-danger"
+                                   asp-area=""
+                                   asp-controller="Actor"
+                                   asp-action="DeleteActor"
+                                   asp-route-id="@actor.Id"
+                                   onclick="event.stopPropagation();">
+                                    Delete Actor
+                                </a>
+                                <button class="btn btn-info"
+                                        onclick="event.stopPropagation(); OpenEditActorModal(
+                                    @actor.Id, '@actor.Name', @actor.Age, '@actor.Gender',
+                                    '@actor.ImdbLink', '@actor.CoverImageLink')">
+                                    Edit Actor
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            }
+        }
+        else
+        {
+            <div class="col-12">
+                <div class="alert alert-warning text-center" role="alert">
+                    No actors available.
+                </div>
+            </div>
+        }
+    </div>
+    <span style="display: none;" id="actorResultsEnd"></span>
+</div>

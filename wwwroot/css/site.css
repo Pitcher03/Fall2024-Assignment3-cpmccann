@@ -1,0 +1,106 @@
+html {
+    font-size: 14px;
+}
+
+@media (min-width: 768px) {
+    html {
+        font-size: 16px;
+    }
+}
+
+.btn:focus, .btn:active:focus, .btn-link.nav-link:focus, .form-control:focus, .form-check-input:focus {
+    box-shadow: 0 0 0 0.1rem white, 0 0 0 0.25rem #258cfb;
+}
+
+html {
+    position: relative;
+    min-height: 100%;
+}
+
+body {
+    margin-bottom: 60px;
+}
+
+.blurred-background {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background-size: cover;
+    background-position: center;
+    filter: blur(4px);
+    z-index: 0;
+}
+
+.overlay {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background-color: rgba(0, 0, 0, 0.5);
+    z-index: 1;
+}
+
+.hover-grow {
+    transition: transform 0.3s ease;
+    overflow: hidden;
+}
+
+.hover-grow:hover {
+    transform: scale(1.05);
+}
+
+.modal.fade .modal-dialog {
+    transition: transform 0.3s ease-out, opacity 0.3s ease-out;
+}
+
+.modal-content {
+    background-color: rgba(0, 0, 0, 0.9);
+    border-radius: 8px;
+    overflow: hidden;
+    max-height: 90vh;
+}
+
+.modal-header {
+    background-color: rgba(0, 0, 0, 0.8);
+    border-bottom: none;
+}
+
+.movie-cover-image, .actor-cover-image {
+    background-size: cover;
+    background-position: center;
+    width: 30%;
+    height: 300px;
+    border-radius: 5px;
+}
+
+.movie-info, .actor-info {
+    color: white;
+    flex-grow: 1;
+    max-width: 70%;
+}
+
+.modal-footer {
+    max-height: 40%;
+    overflow-y: auto;
+}
+
+.reviews-container, .tweets-container {
+    color: black;
+    background-color: white;
+    padding: 15px;
+    border-radius: 5px;
+    overflow-y: auto;
+    max-height: 200px;
+}
+
+tr:nth-child(odd) {
+    background-color: #eee;
+}
+
+tr {
+    display: block;
+    padding: 5px;
+}
