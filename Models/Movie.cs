@@ -10,7 +10,7 @@
         public string? ImdbLink { get; set; }
         public string? CoverImageLink { get; set; }
         public DateTime DateAdded { get; set; }
-        public List<Actor>? Actors { get; set; }
+        public string? Actors { get; set; }
         public string? Reviews { get; set; }
     }
 }

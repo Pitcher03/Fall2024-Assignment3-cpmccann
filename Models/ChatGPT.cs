@@ -3,6 +3,7 @@ using System.Net.Http;
 using System.Text;
 using System.Text.Json;
 using System.Threading.Tasks;
+using Humanizer.Localisation;
 using Microsoft.Extensions.Configuration;
 using VaderSharp2;
 
@@ -34,6 +35,59 @@ namespace Fall2024_Assignment3_cpmccann.Models
             string prompt = "Write " + numReviews + " reviews for the movie " + movieName + ", a " + genre + 
                 " film made in " + year + ". All reviews should be independent and do not reference each other.";
 
+            string reviewsRaw = await AskChatGPT(persona, prompt);
+            List<string> reviewsAsText = new List<string>(reviewsRaw.Split("$"));
+            List<Review> reviews = new List<Review>();
+
+            foreach (string txt in reviewsAsText)
+            {
+                Review r = new Review
+                {
+                    Author = txt.Split("|")[0].Replace("{","").Replace("}","").Trim(),
+                    Content = txt.Split("|")[1].Replace("{", "").Replace("}", "").Trim(),
+                    Date = RandomDate(year),
+                };
+                var polarity = _vadersharp.PolarityScores(r.Content);
+                r.Rating = 0.5*Math.Round(5*(polarity.Compound+1)); // 2.668 -> 5.26 -> 5 -> 2.5
+                reviews.Add(r);
+            }
+
+            return reviews;
+        }
+
+        public async Task<List<Tweet>> GenerateTweets(string actorName, int age, int numTweets)
+        {
+            string persona = "Assume the role of an unemployed twitter user. You consider yourself a movie critic, despite " +
+                "not being very educated. Your job is to write tweets about actors. You have strong opinions about their " +
+                "acting skills, appearance, and public character. When you are asked to write n tweets about someone, respond " +
+                "in the format {username1}: {tweet1} $ {username2}: {tweet2}, where you pick a different username for each of " +
+                "your burner accounts and separate these tweets with the dollar sign. Follow this format exactly as it will be " +
+                "used for parsing.";
+            string prompt = "Write " + numTweets + " tweets about " + actorName + ", age " + age + ". Be sure to come up with " +
+                "funny and original usernames for each tweet. Do not forget the fucking dollar sign between the reviews!";
+
+            string tweetsRaw = await AskChatGPT(persona, prompt);
+            List<string> tweetsAsText = new List<string>(tweetsRaw.Split("$"));
+            List<Tweet> tweets = new List<Tweet>();
+
+            foreach (string txt in tweetsAsText)
+            {
+                Tweet t = new Tweet
+                {
+                    Author = txt.Split(": ")[0].Replace("{", "").Replace("}", "").Trim(),
+                    Content = txt.Split(": ")[1].Replace("{", "").Replace("}", "").Trim()
+                };
+
+                var polarity = _vadersharp.PolarityScores(t.Content);
+                t.Rating = 0.5 * Math.Round(10 * (polarity.Compound + 1)); // 0.5 -> 1.5 -> 15 -> 7.5
+                tweets.Add(t);
+            }
+
+            return tweets;
+        }
+
+        public async Task<string> AskChatGPT(string persona, string prompt)
+        {
             var requestBody = new
             {
                 model = "gpt-35-turbo",
@@ -57,35 +111,14 @@ namespace Fall2024_Assignment3_cpmccann.Models
 
             if (response.IsSuccessStatusCode)
             {
-                List<Review> reviews = new List<Review>(); 
                 var responseContent = await response.Content.ReadAsStringAsync();
                 using JsonDocument json = JsonDocument.Parse(responseContent);
-                string responseBody = json.RootElement.GetProperty("choices")[0].GetProperty("message").GetProperty("content").ToString().Trim();
-                List<string> reviewsAsText = new List<string>(responseBody.Split("$"));
-                foreach (string txt in reviewsAsText)
-                {
-                    Review r = new Review
-                    {
-                        Author = txt.Split("|")[0].Replace("{","").Replace("}","").Trim(),
-                        Content = txt.Split("|")[1].Replace("{", "").Replace("}", "").Trim(),
-                        Date = RandomDate(year),
-                    };
-                    var polarity = _vadersharp.PolarityScores(r.Content);
-                    r.Rating = 0.5*Math.Round(5*(polarity.Compound+1)); // 2.668 -> 5.26 -> 5 -> 2.5
-                    reviews.Add(r);
-                }
-
-                return reviews;
+                return json.RootElement.GetProperty("choices")[0].GetProperty("message").GetProperty("content").ToString().Trim();
             }
             else
             {
                 throw new Exception($"Error: {response.StatusCode} - {await response.Content.ReadAsStringAsync()}");
             }
-        }
-
-        public async Task<List<Tweet>> GenerateTweets(string actorName, int age, int numTweets)
-        {
-            return new List<Tweet>();
         }
 
         public string RandomDate(int year)

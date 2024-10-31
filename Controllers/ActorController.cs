@@ -28,6 +28,32 @@ namespace Fall2024_Assignment3_cpmccann.Controllers
             return View("Actors");
         }
 
+        public string FindDistinctActors()
+        {
+            string? dbConnectionString = _configuration.GetConnectionString("DefaultConnection");
+            if (dbConnectionString == null) return "Unable to access db.";
+            string actors = "";
+
+            using (SqlConnection con = new SqlConnection(dbConnectionString))
+            {
+                string query = "SELECT DISTINCT Id, Name FROM Actors;";
+
+                using (SqlCommand sql = new SqlCommand(query, con))
+                {
+                    con.Open();
+                    using (SqlDataReader reader = sql.ExecuteReader())
+                    {
+                        while (reader.Read())
+                        {
+                            actors += reader.GetInt32(0) + " | " + reader.GetString(1) + " $ ";
+                        }
+                    }
+                }
+            }
+
+            return actors;
+        }
+
         public IActionResult GetActors()
         {
             ActorModel model = new ActorModel();
@@ -57,38 +83,78 @@ namespace Fall2024_Assignment3_cpmccann.Controllers
                                 CoverImageLink = reader.GetString(5),
                                 Tweets = reader.GetString(6)
                             };
+
+                            List<string> movies = new List<string>();
+
+                            using (SqlConnection con2 = new SqlConnection(dbConnectionString))
+                            {
+                                con2.Open();
+                                string query2 = @"
+                                                SELECT m.Id, m.Name 
+                                                FROM Movies m
+                                                INNER JOIN MovieActors ma ON m.Id = ma.MovieId
+                                                WHERE ma.ActorId = @ActorId";
+
+                                using (SqlCommand sql2 = new SqlCommand(query2, con2))
+                                {
+                                    sql2.Parameters.AddWithValue("@ActorId", actor.Id);
+                                    using (SqlDataReader reader2 = sql2.ExecuteReader())
+                                    {
+                                        if (reader2.HasRows)
+                                        {
+                                            while (reader2.Read())
+                                            {
+                                                int movieId = reader2.GetInt32(0);
+                                                string movieName = reader2.GetString(1);
+                                                movies.Add($"{movieId} | {movieName}");
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                            actor.Movies = movies.Count > 0 ? string.Join(" $ ", movies) : "No movies found!";
+                            actors.Add(actor);
                         }
                     }
                 }
             }
 
             model.ActorList = actors;
-
             return View("ActorResults", model);
         }
+
 
         public async Task<IActionResult> AddActor(IFormCollection formInput)
         {
             Actor a = new Actor
             {
                 Name = formInput["name"].ToString().Trim(),
-                Age = Convert.ToInt32(formInput["year"].ToString()),
-                Gender = formInput["genre"].ToString().Trim(),
+                Age = Convert.ToInt32(formInput["age"].ToString()),
+                Gender = formInput["gender"].ToString().Trim(),
                 ImdbLink = formInput["imdblink"].ToString().Trim(),
                 CoverImageLink = formInput["coverimagelink"].ToString().Trim()
             };
 
             a.Tweets = await GenerateActorTweets(a);
 
+            List<string> movieIds = new List<string>(formInput["movies"]);
+
             string? dbConnectionString = _configuration.GetConnectionString("DefaultConnection");
-            if (dbConnectionString == null) return View("Error");
+            if (dbConnectionString == null)
+            {
+                ViewBag.ErrorMessage = "Database connection string is missing.";
+                return View("Error");
+            }
 
             using (SqlConnection con = new SqlConnection(dbConnectionString))
             {
+                con.Open();
+
                 string query = "INSERT INTO Actors (Name, Gender, Age, ImdbLink, CoverImageLink, Tweets) ";
-                query += "VALUES (@Name, @Gender, @Age, @ImdbLink, @CoverImageLink, @Tweets)";
+                query += "VALUES (@Name, @Gender, @Age, @ImdbLink, @CoverImageLink, @Tweets); SELECT SCOPE_IDENTITY();";
                 if (a.Tweets == null) a.Tweets = "No tweets yet!";
 
+                int actorId = 0;
                 using (SqlCommand sql = new SqlCommand(query, con))
                 {
                     sql.Parameters.AddWithValue("@Name", a.Name);
@@ -97,12 +163,23 @@ namespace Fall2024_Assignment3_cpmccann.Controllers
                     sql.Parameters.AddWithValue("@ImdbLink", a.ImdbLink);
                     sql.Parameters.AddWithValue("@CoverImageLink", a.CoverImageLink);
                     sql.Parameters.AddWithValue("@Tweets", a.Tweets);
-                    con.Open();
-                    sql.ExecuteNonQuery();
-                }
-            }
 
-            List<string> movies = new List<string>(formInput["movies"]);
+                    actorId = Convert.ToInt32(sql.ExecuteScalar());
+                }
+                
+                string query2 = "INSERT INTO MovieActors (MovieId, ActorId) VALUES (@MovieId, @ActorId)";
+                foreach (string movieId in movieIds)
+                {
+                    using (SqlCommand sql2 = new SqlCommand(query2, con))
+                    {
+                        sql2.Parameters.AddWithValue("@MovieId", movieId);
+                        sql2.Parameters.AddWithValue("@ActorId", actorId);
+                        sql2.ExecuteNonQuery();
+                    }
+                }
+
+                con.Close();
+            }
 
             return Redirect("/Home/Actors");
         }
@@ -116,16 +193,15 @@ namespace Fall2024_Assignment3_cpmccann.Controllers
             string gender = formInput["gender"].ToString().Trim();
             string imdblink = formInput["imdblink"].ToString().Trim();
             string coverimagelink = formInput["coverimagelink"].ToString().Trim();
-            List<string> movies = formInput["movies"].ToString() != ""
-                ? new List<string>(formInput["movies"].ToList())
-                : new List<string>();
-            // fix that ^
+            List<string> movieIds = new List<string>(formInput["movies"]);
 
             string? dbConnectionString = _configuration.GetConnectionString("DefaultConnection");
             if (dbConnectionString == null) return View("Error");
 
             using (SqlConnection con = new SqlConnection(dbConnectionString))
             {
+                con.Open();
+
                 string query = "UPDATE Actors SET Name = @Name, Age = @Age, Gender = @Gender, " +
                     "ImdbLink = @ImdbLink, CoverImageLink = @CoverImageLink WHERE Id = @Id";
 
@@ -137,10 +213,31 @@ namespace Fall2024_Assignment3_cpmccann.Controllers
                     sql.Parameters.AddWithValue("@Gender", gender);
                     sql.Parameters.AddWithValue("@ImdbLink", imdblink);
                     sql.Parameters.AddWithValue("@CoverImageLink", coverimagelink);
-
-                    con.Open();
+                    
                     sql.ExecuteNonQuery();
                 }
+
+                string query2 = "DELETE FROM MovieActors WHERE ActorId = @ActorId";
+
+                using (SqlCommand sql2 = new SqlCommand(query2, con))
+                {
+                    sql2.Parameters.AddWithValue("@ActorId", actorId);
+                    sql2.ExecuteNonQuery();
+                }
+
+                string query3 = "INSERT INTO MovieActors (MovieId, ActorId) VALUES (@MovieId, @ActorId)";
+
+                foreach (string movieId in movieIds)
+                {
+                    using (SqlCommand sql3 = new SqlCommand(query3, con))
+                    {
+                        sql3.Parameters.AddWithValue("@MovieId", movieId);
+                        sql3.Parameters.AddWithValue("@ActorId", actorId);
+                        sql3.ExecuteNonQuery();
+                    }
+                }
+
+                con.Close();
             };
 
             return Redirect("/Home/Actors");
@@ -161,7 +258,7 @@ namespace Fall2024_Assignment3_cpmccann.Controllers
                     con.Open();
                     sql.ExecuteNonQuery();
                 }
-            };
+            }
 
             return Redirect("/Home/Actors");
         }
@@ -177,10 +274,8 @@ namespace Fall2024_Assignment3_cpmccann.Controllers
                 {
                     tweetHTML += $"<tr><td style='vertical-align: top; width: 150px;'>" +
                                     $"<div style='text-wrap: nowrap;'><b>{tweet.Author}</b></div>" +
-                                    $"<div><b>{tweet.Rating} </b><i class='fa fa-star'></i></div>" +
-                                    $"<div><b>{tweet.Date}<b/></div></td>" +
-                                    $"<td style='vertical-align: top;'>" +
-                                    tweet.Contents + "</td></tr>";
+                                    $"<div><b>{tweet.Rating} </b><i class='fa fa-star'></i></div></td>" +
+                                    $"<td style='vertical-align: top;'>" + tweet.Content + "</td></tr>";
                 }
                 return tweetHTML + "</table>";
             }
@@ -203,10 +298,8 @@ namespace Fall2024_Assignment3_cpmccann.Controllers
                 {
                     tweetHTML += $"<tr><td style='vertical-align: top; width: 150px;'>" +
                                     $"<div style='text-wrap: nowrap;'><b>{tweet.Author}</b></div>" +
-                                    $"<div><b>{tweet.Rating} </b><i class='fa fa-star'></i></div>" +
-                                    $"<div><b>{tweet.Date}<b/></div></td>" +
-                                    $"<td style='vertical-align: top;'>" +
-                                    tweet.Contents + "</td></tr>";
+                                    $"<div><b>{tweet.Rating} </b><i class='fa fa-star'></i></div></td>" +
+                                    $"<td style='vertical-align: top;'>" + tweet.Content + "</td></tr>";
                 }
                 tweetHTML += "</table>";
             }

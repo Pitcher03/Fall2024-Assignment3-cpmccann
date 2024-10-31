@@ -23,6 +23,11 @@ namespace Fall2024_Assignment3_cpmccann.Controllers
             return View("Movies");
         }
 
+        public IActionResult Actors()
+        {
+            return View("Actors");
+        }
+
         [ResponseCache(Duration = 0, Location = ResponseCacheLocation.None, NoStore = true)]
         public IActionResult Error()
         {

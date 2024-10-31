@@ -3,9 +3,7 @@
     public class Tweet
     {
         public string? Author { get; set; }
-        public DateTime Date { get; set; }
-        public string? Contents { get; set; }
-
-        public int Rating { get; set; }
+        public string? Content { get; set; }
+        public double Rating { get; set; }
     }
 }

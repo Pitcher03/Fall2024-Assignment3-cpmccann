@@ -26,6 +26,32 @@ namespace Fall2024_Assignment3_cpmccann.Controllers
             return View("Movies");
         }
 
+        public string FindDistinctMovies()
+        {
+            string? dbConnectionString = _configuration.GetConnectionString("DefaultConnection");
+            if (dbConnectionString == null) return "Unable to access db.";
+            string movies = "";
+
+            using (SqlConnection con = new SqlConnection(dbConnectionString))
+            {
+                string query = "SELECT DISTINCT Id, Name FROM Movies;";
+
+                using (SqlCommand sql = new SqlCommand(query, con))
+                {
+                    con.Open();
+                    using (SqlDataReader reader = sql.ExecuteReader())
+                    {
+                        while (reader.Read())
+                        {
+                            movies += reader.GetInt32(0) + " | " + reader.GetString(1) + " $ ";
+                        }
+                    }
+                }
+            }
+
+            return movies;
+        }
+
         public IActionResult GetMovies()
         {
             MovieModel model = new MovieModel();
@@ -57,6 +83,36 @@ namespace Fall2024_Assignment3_cpmccann.Controllers
                                 DateAdded = reader.GetDateTime(7),
                                 Reviews = reader.GetString(8)
                             };
+
+                            List<string> actors = new List<string>();
+
+                            using (SqlConnection con2 = new SqlConnection(dbConnectionString))
+                            {
+                                con2.Open();
+                                string query2 = @"
+                                                SELECT a.Id, a.Name
+                                                FROM Actors a
+                                                INNER JOIN MovieActors ma ON a.Id = ma.ActorId
+                                                WHERE ma.MovieId = @MovieId";
+
+                                using (SqlCommand sql2 = new SqlCommand(query2, con2))
+                                {
+                                    sql2.Parameters.AddWithValue("@MovieId", movie.Id);
+                                    using (SqlDataReader reader2 = sql2.ExecuteReader())
+                                    {
+                                        if (reader2.HasRows)
+                                        {
+                                            while (reader2.Read())
+                                            {
+                                                int actorId = reader2.GetInt32(0);
+                                                string actorName = reader2.GetString(1);
+                                                actors.Add($"{actorId} | {actorName}");
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                            movie.Actors = actors.Count > 0 ? string.Join(" $ ", actors) : "No actors listed!";
                             movies.Add(movie);
                         }
                     }
@@ -64,7 +120,6 @@ namespace Fall2024_Assignment3_cpmccann.Controllers
             }
 
             model.MovieList = movies;
-
             return View("MovieResults", model);
         }
 
@@ -83,15 +138,20 @@ namespace Fall2024_Assignment3_cpmccann.Controllers
 
             m.Reviews = await GenerateMovieReviews(m);
 
+            List<string> actorIds = new List<string>(formInput["actors"]);
+
             string? dbConnectionString = _configuration.GetConnectionString("DefaultConnection");
             if (dbConnectionString == null) return View("Error");
 
             using (SqlConnection con = new SqlConnection(dbConnectionString))
             {
+                con.Open();
+
                 string query = "INSERT INTO Movies (Name, Year, Genre, Description, ImdbLink, CoverImageLink, DateAdded, Reviews) ";
-                query += "VALUES (@Name, @Year, @Genre, @Description, @ImdbLink, @CoverImageLink, GETDATE(), @Reviews)";
+                query += "VALUES (@Name, @Year, @Genre, @Description, @ImdbLink, @CoverImageLink, GETDATE(), @Reviews); SELECT SCOPE_IDENTITY();";
                 if (m.Reviews == null) m.Reviews = "No reviews yet!";
 
+                int movieId = 0;
                 using (SqlCommand sql = new SqlCommand(query, con))
                 {
                     sql.Parameters.AddWithValue("@Name", m.Name);
@@ -101,18 +161,23 @@ namespace Fall2024_Assignment3_cpmccann.Controllers
                     sql.Parameters.AddWithValue("@ImdbLink", m.ImdbLink);
                     sql.Parameters.AddWithValue("@CoverImageLink", m.CoverImageLink);
                     sql.Parameters.AddWithValue("@Reviews", m.Reviews);
-                    con.Open();
-                    sql.ExecuteNonQuery();
+                    
+                    movieId = Convert.ToInt32(sql.ExecuteScalar());
                 }
-            };
 
-            // TODO: insert actors to movie actor table
-            List<string> actorNames = new List<string>(formInput["actors"]);
-            // get actor ids instead of names through the form
+                string query2 = "INSERT INTO MovieActors (MovieId, ActorId) VALUES (@MovieId, @ActorId)";
+                foreach (string actorId in actorIds)
+                {
+                    using (SqlCommand sql2 = new SqlCommand(query2, con))
+                    {
+                        sql2.Parameters.AddWithValue("@MovieId", movieId);
+                        sql2.Parameters.AddWithValue("@ActorId", actorId);
+                        sql2.ExecuteNonQuery();
+                    }
+                }
 
-            // for each actor
-            // add row to actormovies
-            // actor=actorIds[i], movie=this movie
+                con.Close();
+            }
 
             return Redirect("/Home/Movies");
         }
@@ -127,16 +192,15 @@ namespace Fall2024_Assignment3_cpmccann.Controllers
             string description = formInput["description"].ToString().Trim();
             string imdblink = formInput["imdblink"].ToString().Trim();
             string coverimagelink = formInput["coverimagelink"].ToString().Trim();
-            List<string> actors = formInput["actors"].ToString() != "" 
-                ? new List<string>(formInput["actors"].ToList()) 
-                : new List<string>();
-            // fix that ^
+            List<string> actorIds = new List<string>(formInput["actors"]);
 
             string? dbConnectionString = _configuration.GetConnectionString("DefaultConnection");
             if (dbConnectionString == null) return View("Error");
 
             using (SqlConnection con = new SqlConnection(dbConnectionString))
             {
+                con.Open();
+
                 string query = "UPDATE Movies SET Name = @Name, Year = @Year, Genre = @Genre, " +
                     "Description = @Description, ImdbLink = @ImdbLink, CoverImageLink = " +
                     "@CoverImageLink WHERE Id = @Id";
@@ -151,9 +215,30 @@ namespace Fall2024_Assignment3_cpmccann.Controllers
                     sql.Parameters.AddWithValue("@ImdbLink", imdblink);
                     sql.Parameters.AddWithValue("@CoverImageLink", coverimagelink);
 
-                    con.Open();
                     sql.ExecuteNonQuery();
                 }
+
+                string query2 = "DELETE FROM MovieActors WHERE MovieId = @MovieId";
+
+                using (SqlCommand sql2 = new SqlCommand(query2, con))
+                {
+                    sql2.Parameters.AddWithValue("@MovieId", movieId);
+                    sql2.ExecuteNonQuery();
+                }
+
+                string query3 = "INSERT INTO MovieActors (MovieId, ActorId) VALUES (@MovieId, @ActorId)";
+
+                foreach (string actorId in actorIds)
+                {
+                    using (SqlCommand sql3 = new SqlCommand(query3, con))
+                    {
+                        sql3.Parameters.AddWithValue("@MovieId", movieId);
+                        sql3.Parameters.AddWithValue("@ActorId", actorId);
+                        sql3.ExecuteNonQuery();
+                    }
+                }
+
+                con.Close();
             };
 
             return Redirect("/Home/Movies");
@@ -174,7 +259,7 @@ namespace Fall2024_Assignment3_cpmccann.Controllers
                     con.Open();
                     sql.ExecuteNonQuery();
                 }
-            };
+            }
 
             return Redirect("/Home/Movies");
         }
@@ -205,6 +290,8 @@ namespace Fall2024_Assignment3_cpmccann.Controllers
 
         public async Task<IActionResult> AddMovieReviews(string movie, int year, string genre)
         {
+            if (genre == null) genre = "Unknown";
+
             string reviewHTML = "";
 
             int numReviews = new Random().Next(5, 10);

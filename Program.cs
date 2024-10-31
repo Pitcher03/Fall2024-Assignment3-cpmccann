@@ -2,15 +2,25 @@ using Fall2024_Assignment3_cpmccann.Data;
 using Fall2024_Assignment3_cpmccann.Models;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
+using Azure.Identity;
+using Azure.Security.KeyVault.Secrets;
 
-// server login
-// caden
-// cpm-server-1
+var kvUri = "https://cpmccann-vault.vault.azure.net/";
+var client = new SecretClient(new Uri(kvUri), new DefaultAzureCredential());
+
+KeyVaultSecret db_secret = client.GetSecret("DefaultConnection");
+KeyVaultSecret openai_secret = client.GetSecret("ChatGPT");
 
 var builder = WebApplication.CreateBuilder(args);
 
 // Add services to the container.
-var connectionString = builder.Configuration.GetConnectionString("DefaultConnection") ?? throw new InvalidOperationException("Connection string 'DefaultConnection' not found.");
+
+// development db
+//var connectionString = builder.Configuration.GetConnectionString("DefaultConnection") ?? throw new InvalidOperationException("Connection string 'DefaultConnection' not found.");
+
+// published db
+var connectionString = db_secret.Value;
+
 builder.Services.AddDbContext<ApplicationDbContext>(options =>
     options.UseSqlServer(connectionString));
 builder.Services.AddDatabaseDeveloperPageExceptionFilter();

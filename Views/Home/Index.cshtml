@@ -2,7 +2,116 @@
     ViewData["Title"] = "Home Page";
 }
 
-<div class="text-center">
-    <h1 class="display-4">Welcome</h1>
-    <p>Learn about <a href="https://learn.microsoft.com/aspnet/core">building Web apps with ASP.NET Core</a>.</p>
+<div id="floatingBackground" class="floating-background">
+
 </div>
+<div class="container-fluid text-center bg-light py-5">
+    <h1 class="display-3 text-primary mb-4">Welcome to MovieMovie.gamer</h1>
+    <p class="lead text-secondary">Explore, manage, and learn about your favorite movies and actors.</p>
+</div>
+<div class="container my-5">
+    <div class="row justify-content-center">
+        <div class="col-md-8">
+            <div class="card border-primary shadow">
+                <div class="card-body">
+                    <h2 class="card-title text-center text-primary mb-4">Your gateway to the ultimate movie experience!</h2>
+                    <p class="card-text text-center text-dark">
+                        Dive into a world of movies! Add, edit, and delete records for both movies and actors. Whether you're here to manage data or explore, we're excited to help you on this cinematic journey.
+                    </p>
+                    <p class="text-center text-muted mt-3">
+                        Use the navigation above to begin exploring.
+                    </p>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+<script>
+    const floatingBackground = document.getElementById("floatingBackground");
+
+    function createStar() {
+        const star = document.createElement("div");
+        star.classList.add("star");
+
+        star.style.top = `${Math.random() * 100}vh`;
+        star.style.left = `${Math.random() * 100}vw`;
+
+        const size = Math.random() * 6 + 1;
+        star.style.width = `${size}px`;
+        star.style.height = `${size}px`;
+
+        star.style.animationDuration = `${1 + Math.random() * 2}s`;
+        star.style.animationDelay = `${Math.random() * 3}s`;
+
+        floatingBackground.appendChild(star);
+    }
+
+    function createFloatingElement(cornerNum) {
+        console.log(cornerNum);
+        const img = document.createElement("img");
+        img.src = "movie.png";
+        img.classList.add("floating-element");
+        let width = window.innerWidth;
+        let height = window.innerHeight;
+
+        if (cornerNum==1) {
+            img.style.top = `-100px`;
+            img.style.left = `${Math.random() * width}px`;
+        } else if (cornerNum==2) {
+            img.style.top = `${height+100}px`;
+            img.style.left = `${Math.random() * width}px`;
+        } else if (cornerNum==3) {
+            img.style.top = `${Math.random() * height}px`;
+            img.style.left = `-100px`;
+        } else {
+            img.style.top = `${Math.random() * height}px`;
+            img.style.left = `${width+100}px`;
+        }
+
+        floatingBackground.appendChild(img);
+        moveFloatingElement(img);
+    }
+
+    function moveFloatingElement(element) {
+        const targetX = Math.random() * (window.innerWidth - 80);
+        const targetY = Math.random() * (window.innerHeight - 80);
+        const startX = parseFloat(element.style.left);
+        const startY = parseFloat(element.style.top);
+        const deltaX = targetX - startX;
+        const deltaY = targetY - startY;
+
+        console.log(targetX, targetY, startX, startY);
+
+        const distance = Math.sqrt(deltaX * deltaX + deltaY * deltaY);
+        const duration = 10000;
+        const totalFrames = (60*duration/1000);
+        const stepX = (deltaX / totalFrames);
+        const stepY = (deltaY / totalFrames);
+
+        let frameCount = 0;
+
+        function animate() {
+            frameCount++;
+            element.style.left = `${startX + stepX * frameCount}px`;
+            element.style.top = `${startY + stepY * frameCount}px`;
+
+            if (frameCount < totalFrames) {
+                requestAnimationFrame(animate);
+            } else {
+                element.remove();
+                createFloatingElement(Math.floor(Math.random() * 4));
+            }
+        }
+
+        animate();
+    }
+
+    for (let i = 0; i < 150; i++) {
+        createStar();
+    }
+
+    for (let i = 0; i < 7; i++) {
+        createFloatingElement(Math.floor(Math.random()*4));
+    }
+</script>
+

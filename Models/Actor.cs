@@ -8,7 +8,7 @@
         public int Age { get; set; }
         public string? ImdbLink { get; set; }
         public string? CoverImageLink { get; set; }
-        public List<Movie>? Movies { get; set; }
+        public string? Movies { get; set; }
         public string? Tweets { get; set; }
     }
 }

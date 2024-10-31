@@ -1,13 +1,11 @@
 ﻿@{
     ViewBag.Title = "Manage Actors";
-
-    List<Movie> movies = new List<Movie>();
 }
 
-<link href="https://maxcdn.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css" rel="stylesheet">
-<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
-<script src="https://code.jquery.com/jquery-3.5.1.min.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/bootstrap@4.5.2/dist/js/bootstrap.bundle.min.js"></script>
+<link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css" integrity="sha384-JcKb8q3iqJ61gNV9KGb8thSsNjpSL0n8PARn9HuZOnIxN0hoP+VmmDGMN5t9UJ0Z" crossorigin="anonymous">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css" integrity="sha384-5e2ESR8Ycmos6g3gAKr1Jvwye8sW4U1u/cAKulfVJnkakCcMqhOudbtPnvJ+nbv7" crossorigin="anonymous"><script src="https://code.jquery.com/jquery-3.5.1.min.js"></script>
+<script src="https://code.jquery.com/jquery-3.5.1.min.js" integrity="sha384-ZvpUoO/+PpLXR1lu4jmpXWu80pZlYUAfxl5NsBMWOEPSjUn/6Z/hRTt8+pR6L4N2" crossorigin="anonymous"></script>
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@4.5.2/dist/js/bootstrap.bundle.min.js" integrity="sha384-LtrjvnR4Twt/qOuYxE721u19sVFLVSA4hf/rRt6PrZTmiPltdZcI7q7PXQBYTKyf" crossorigin="anonymous"></script>
 <h1>Actors</h1>
 <p>Use the tabs below to view, add, edit, or delete actors.</p>
 <ul class="nav nav-tabs" id="movieTab" role="tablist">
@@ -59,7 +57,7 @@
                             <div class="form-group">
                                 <label for="editActorMovies">Select Movies</label>
                                 <select id="editActorMovies" multiple class="form-control" name="movies">
-                                    <option disabled selected value="none">Select Movies</option>
+                                    
                                 </select>
                             </div>
                         </div>
@@ -94,9 +92,8 @@
             </div>
             <div class="form-group">
                 <label for="movies">Select Movies</label>
-                <select multiple class="form-control" name="movies">
-                    <option disabled selected value="none">Select Movies</option>
-                    <option value="actor-1">Actor 1</option>
+                <select multiple id="addActorMovies" class="form-control" name="movies">
+                    
                 </select>
             </div>
             <button type="submit" class="btn btn-primary">Add Actor</button>
@@ -124,12 +121,9 @@
                 </div>
                 <hr class="m-0">
                 <div class="modal-footer flex-column align-items-start bg-light">
-                    <h6 class="text-dark">Tweets</h6>
-                    <div id="viewActorTweets" class="tweers-container w-100">
-                        <p><strong>Reviewer 1:</strong> Lorem ipsum dolor sit amet, consectetur adipiscing elit. Vivamus lacinia odio vitae vestibulum.</p>
-                        <p><strong>Reviewer 2:</strong> Curabitur ac felis arcu. Sed eleifend, lectus sit amet pharetra tincidunt, est est facilisis.</p>
-                        <p><strong>Reviewer 3:</strong> Pellentesque habitant morbi tristique senectus et netus et malesuada fames ac turpis egestas.</p>
-                        <p><strong>Reviewer 4:</strong> Praesent ac semper neque. Donec vel ligula nec erat tempus.</p>
+                    <h6 id="overallTweets" class="text-dark">Tweets</h6>
+                    <div id="viewActorTweets" class="tweets-container w-100">
+
                     </div>
                 </div>
             </div>
@@ -137,6 +131,8 @@
     </div>
 </div>
 <script>
+    var distinctMovies = new Array();
+
     $(document).ready(function () {
         $('#view-tab').on('click', function () {
             $.ajax({
@@ -154,14 +150,56 @@
 
         $('#view-tab').trigger('click');
     });
+
+    $(document).ready(function() {
+        $.ajax({
+            url: '@Url.Action("FindDistinctMovies", "Movie")',
+            type: 'GET',
+            success: function (movietxt) {
+                console.log(movietxt);
+                var rows = movietxt.split(" $ ").filter(Boolean);
+                var addActorMovies = document.getElementById('addActorMovies');
+
+                rows.forEach(r => {
+                    var option = document.createElement('option');
+                    option.value = r.split(" | ")[0];
+                    option.textContent = r.split(" | ")[1];
+                    addActorMovies.appendChild(option);
+                });
+
+                distinctMovies = rows;
+            },
+            error: function (error) {
+                console.error("Error fetching movies:", error);
+            }
+        });
+    });
 </script>
 <script>
-    function OpenEditActorModal(id, name, age, gender, imdblink, coverimagelink) {
+    function OpenEditActorModal(id, name, age, gender, imdblink, coverimagelink, movies) {
+        var rows = movies.split(" $ ").filter(Boolean);
+        for (var i = 0; i < rows.length; i++) {
+            rows[i] = rows[i].split(" | ")[0];
+        }
+
+        var editActorMovies = document.getElementById('editActorMovies');
+        editActorMovies.innerHTML = "";
+
+        for (var i = 0; i < distinctMovies.length; i++) {
+            var option = document.createElement('option');
+            var movie = distinctMovies[i];
+            console.log(movie);
+            option.value = movie.split(" | ")[0];
+            option.textContent = movie.split(" | ")[1];
+            if (rows.includes(option.value)) option.selected = true;
+            editActorMovies.appendChild(option);
+        }
+
         document.getElementById('editActorModal').style.display = "block";
         document.getElementById('editActorModal').style.opacity = "1";
         document.getElementById('actorId').value = id;
         document.getElementById('editActorName').value = name;
-        document.getElementById('editActorAge').value = year;
+        document.getElementById('editActorAge').value = age;
         document.getElementById('editActorGender').value = gender;
         document.getElementById('editActorImdbLink').value = imdblink;
         document.getElementById('editActorCoverImageLink').value = coverimagelink;
@@ -172,6 +210,7 @@
     }
 
     function OpenViewActorModal(name, age, gender, imdblink, coverimagelink, movies, tweets) {
+        movies = movies.split(" $ ").map(pair => pair.split(" | ")[1]).join(", ");
         document.getElementById('viewActorModal').style.display = "block";
         document.getElementById('viewActorModal').style.opacity = "1";
         document.getElementById('viewActorName').innerText = name;
@@ -181,10 +220,116 @@
         document.getElementById('viewActorCoverImage').style.backgroundImage = `url('${coverimagelink}')`;
         document.getElementById('viewActorMovies').innerText = movies;
         document.getElementById('viewActorTweets').innerHTML = tweets;
+
+        const stars = document.querySelectorAll(".fa-star");
+        var ovr = 0;
+        var n = 0;
+        console.log(stars);
+        stars.forEach((star) => {
+            var rating = star.previousSibling;
+            console.log(rating);
+            if (rating && rating.nodeType === Node.ELEMENT_NODE) {
+                n++;
+                ovr += 1 * rating.innerText.trim();
+            }
+        });
+
+        if (n > 0) {
+            document.getElementById("overallTweets").innerText = "Tweets - " + 0.5 * Math.round(2 * ovr / n) + " avg";
+        }
     }
 
     function CloseViewActorModal() {
         document.getElementById('viewActorModal').style.display = "none";
     }
+</script>
+<div id="floatingBackground" class="floating-background">
+</div>
+<script>
+    const floatingBackground = document.getElementById("floatingBackground");
 
+    function createStar() {
+        const star = document.createElement("div");
+        star.classList.add("star");
+
+        star.style.top = `${Math.random() * 100}vh`;
+        star.style.left = `${Math.random() * 100}vw`;
+
+        const size = Math.random() * 6 + 1;
+        star.style.width = `${size}px`;
+        star.style.height = `${size}px`;
+
+        star.style.animationDuration = `${1 + Math.random() * 2}s`;
+        star.style.animationDelay = `${Math.random() * 3}s`;
+
+        floatingBackground.appendChild(star);
+    }
+
+    function createFloatingElement(cornerNum) {
+        console.log(cornerNum);
+        const img = document.createElement("img");
+        img.src = "movie.png";
+        img.classList.add("floating-element");
+        let width = window.innerWidth;
+        let height = window.innerHeight;
+
+        if (cornerNum == 1) {
+            img.style.top = `-100px`;
+            img.style.left = `${Math.random() * width}px`;
+        } else if (cornerNum == 2) {
+            img.style.top = `${height + 100}px`;
+            img.style.left = `${Math.random() * width}px`;
+        } else if (cornerNum == 3) {
+            img.style.top = `${Math.random() * height}px`;
+            img.style.left = `-100px`;
+        } else {
+            img.style.top = `${Math.random() * height}px`;
+            img.style.left = `${width + 100}px`;
+        }
+
+        floatingBackground.appendChild(img);
+        moveFloatingElement(img);
+    }
+
+    function moveFloatingElement(element) {
+        const targetX = Math.random() * (window.innerWidth - 80);
+        const targetY = Math.random() * (window.innerHeight - 80);
+        const startX = parseFloat(element.style.left);
+        const startY = parseFloat(element.style.top);
+        const deltaX = targetX - startX;
+        const deltaY = targetY - startY;
+
+        console.log(targetX, targetY, startX, startY);
+
+        const distance = Math.sqrt(deltaX * deltaX + deltaY * deltaY);
+        const duration = 10000;
+        const totalFrames = (60 * duration / 1000);
+        const stepX = (deltaX / totalFrames);
+        const stepY = (deltaY / totalFrames);
+
+        let frameCount = 0;
+
+        function animate() {
+            frameCount++;
+            element.style.left = `${startX + stepX * frameCount}px`;
+            element.style.top = `${startY + stepY * frameCount}px`;
+
+            if (frameCount < totalFrames) {
+                requestAnimationFrame(animate);
+            } else {
+                element.remove();
+                createFloatingElement(Math.floor(Math.random() * 4));
+            }
+        }
+
+        animate();
+    }
+
+    for (let i = 0; i < 150; i++) {
+        createStar();
+    }
+
+    for (let i = 0; i < 0; i++) {
+        createFloatingElement(Math.floor(Math.random() * 4));
+    }
 </script>

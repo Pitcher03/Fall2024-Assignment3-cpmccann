@@ -11,11 +11,12 @@
         {
             foreach (Movie movie in Model.MovieList)
             {
-                string actors = movie.Actors != null ? string.Join(", ", movie.Actors) : "None Listed";
+                string actorsRaw = movie.Actors == null ? "No actors listed!" : movie.Actors;
                 string? reviews = movie.Reviews != "" ? movie.Reviews : "No reviews yet!";
+
                 <div class="col-md-4 mb-4 d-flex" onclick="OpenViewMovieModal(`@movie.Name`, 
                                         @movie.Year, `@movie.Genre`, `@movie.Description`, 
-                                        '@movie.ImdbLink', '@movie.CoverImageLink', `@actors`, `@reviews`)">
+                                        '@movie.ImdbLink', '@movie.CoverImageLink', `@actorsRaw`, `@reviews`)">
                     <div class="card flex-fill hover-grow">
                         <div class="blurred-background" style="background-image: url(@movie.CoverImageLink)"></div>
                         <div class="overlay"></div>
@@ -37,7 +38,7 @@
                                 <button class="btn btn-info"
                                     onclick="event.stopPropagation(); OpenEditMovieModal(
                                     @movie.Id, '@movie.Name', @movie.Year, '@movie.Genre', 
-                                    '@movie.Description', '@movie.ImdbLink', '@movie.CoverImageLink')">
+                                    '@movie.Description', '@movie.ImdbLink', '@movie.CoverImageLink', '@actorsRaw')">
                                     Edit Movie
                                 </button>
                             </div>
